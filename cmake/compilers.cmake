@@ -54,8 +54,12 @@ endif()
 # Setup for MSVC compiler (version >= 2012):
 #
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  add_compile_options(/bigobj /utf-8 $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>)
-  add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
+  add_compile_options(
+    $<$<COMPILE_LANGUAGE:C,CXX>:/bigobj>
+    $<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>
+    $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/bigobj,/utf-8,/Zc:__cplusplus,/Zc:preprocessor>)
+  add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
   set(KNOWN_COMPILER TRUE)
 endif()
 

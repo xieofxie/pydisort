@@ -231,8 +231,11 @@ Windows) and exposes it as
 Windows uses MSVC with the shared runtime. CMake generates the public
 ``disort_export.h`` header for DLL exports and copies public headers into
 ``build/disort`` so a checkout does not need Windows symlink privileges.
-The Windows CPU path calls the CPU kernel directly rather than using
-PyTorch's private dispatch macros, which mark custom stubs as DLL imports.
+The Windows dispatcher calls the CPU or CUDA kernel directly rather than
+using PyTorch's private dispatch macros, which mark custom stubs as DLL
+imports. With ``-DCUDA=ON``, CMake compiles CUDA sources into the same solver
+DLL and requires a CUDA-enabled PyTorch installation. The default and the
+Windows release workflow remain CPU-only.
 
 The two-step build
 ~~~~~~~~~~~~~~~~~~
@@ -260,7 +263,8 @@ resolves both the disort library and torch's own shared objects.
 ``setup.py`` also chooses between ``CppExtension`` and ``CUDAExtension``
 depending on whether ``torch.cuda.is_available()`` on Linux/macOS. Windows
 always uses ``CppExtension`` and packages the solver DLL next to the
-``.pyd`` instead of using Unix rpaths.
+``.pyd`` instead of using Unix rpaths, including for CUDA source builds:
+their CUDA kernels are already in the CMake-built solver DLL.
 
 Reference articles
 ~~~~~~~~~~~~~~~~~~

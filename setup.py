@@ -87,6 +87,7 @@ class BuildExtension(cpp_extension.BuildExtension):
         return outputs
 
 
+# Windows CUDA kernels are linked into the solver DLL by CMake.
 if sys.platform != "win32" and torch.cuda.is_available():
     ext_module = cpp_extension.CUDAExtension(
         name="pydisort.pydisort",

@@ -8,10 +8,6 @@ option(CUDA "Enable CUDA support" OFF)
 option(BUILD_EXAMPLES "Build examples" OFF)
 option(BUILD_TESTS "Build tests" ON)
 
-if(WIN32 AND CUDA)
-  message(FATAL_ERROR "Windows builds currently support CPU only; use -DCUDA=OFF.")
-endif()
-
 if (CUDA)
   project(
     pydisort
@@ -90,7 +86,8 @@ if(WIN32)
 
   # Windows checkouts may materialize the disort -> src symlink as a text file.
   file(GLOB public_headers "${CMAKE_SOURCE_DIR}/src/*.h"
-                           "${CMAKE_SOURCE_DIR}/src/*.hpp")
+                           "${CMAKE_SOURCE_DIR}/src/*.hpp"
+                           "${CMAKE_SOURCE_DIR}/src/*.cuh")
   foreach(header ${public_headers})
     get_filename_component(header_name "${header}" NAME)
     configure_file("${header}" "${CMAKE_BINARY_DIR}/disort/${header_name}" COPYONLY)
@@ -109,6 +106,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fmt.cmake)
 find_package(Torch REQUIRED)
 if (CUDA)
   find_package(CUDAToolkit REQUIRED)
+  if(NOT TORCH_CUDA_LIBRARY OR NOT C10_CUDA_LIBRARY)
+    message(FATAL_ERROR "CUDA builds require a CUDA-enabled PyTorch installation.")
+  endif()
 else()
   set(CUDAToolkit_FOUND OFF)
 endif()

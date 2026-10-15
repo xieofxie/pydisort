@@ -44,11 +44,6 @@ generate_export_header(${namel}_${buildl}
     EXPORT_MACRO_NAME PYDISORT_API
     EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/disort_export.h")
 
-set_target_properties(${namel}_${buildl}
-    PROPERTIES
-    COMPILE_FLAGS "${CMAKE_CXX_FLAGS_${buildu}}"
-    )
-
 target_include_directories(${namel}_${buildl}
     PRIVATE "${FMT_INCLUDE_DIR}"
     )
@@ -68,24 +63,29 @@ add_library(pydisort::disort ALIAS ${namel}_${buildl})
 if (CUDAToolkit_FOUND)
   file(GLOB cu_src_files CONFIGURE_DEPENDS *.cu)
 
-  add_library(${namel}_cuda_${buildl}
-      SHARED
-      ${cu_src_files}
-      )
+  if(WIN32)
+    # Keep the direct Windows dispatcher and CUDA entry point in one DLL.
+    set(cuda_target ${namel}_${buildl})
+    target_sources(${cuda_target} PRIVATE ${cu_src_files})
+    target_compile_definitions(${cuda_target} PRIVATE PYDISORT_WITH_CUDA)
+  else()
+    set(cuda_target ${namel}_cuda_${buildl})
+    add_library(${cuda_target} SHARED ${cu_src_files})
+  endif()
 
-  set_target_properties(${namel}_cuda_${buildl}
+  set_target_properties(${cuda_target}
       PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON
       )
 
-  target_link_libraries(${namel}_cuda_${buildl}
+  target_link_libraries(${cuda_target}
       PUBLIC
       $<IF:$<BOOL:${CUDAToolkit_FOUND}>,CUDA::cudart,>
       $<IF:$<BOOL:${CUDAToolkit_FOUND}>,CUDA::cudart_static,>
       $<IF:$<BOOL:${CUDAToolkit_FOUND}>,${TORCH_CUDA_LIBRARY},>
       $<IF:$<BOOL:${CUDAToolkit_FOUND}>,${C10_CUDA_LIBRARY},>)
 
-  add_library(pydisort::disort_cu ALIAS ${namel}_cuda_${buildl})
+  add_library(pydisort::disort_cu ALIAS ${cuda_target})
 endif()
 
 set(DISORT_INCLUDE_DIR

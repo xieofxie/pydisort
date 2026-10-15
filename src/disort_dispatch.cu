@@ -139,8 +139,10 @@ void call_disort_cuda(at::TensorIterator& iter, int upward, bool force_general,
 
 }  // namespace disort
 
+#ifndef _WIN32
 namespace at::native {
 
 REGISTER_CUDA_DISPATCH(call_disort, &disort::call_disort_cuda);
 
 }  // namespace at::native
+#endif

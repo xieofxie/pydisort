@@ -87,7 +87,7 @@ root, with x64 Python on PATH:
   cmake --build build --parallel 2
   python -m pip install --no-build-isolation .
 
-Windows builds support CPU tensors only, even with a CUDA-enabled PyTorch
+This configuration supports CPU tensors only, even with a CUDA-enabled PyTorch
 installation. The wheel bundles the solver DLL beside the Python extension;
 PyTorch supplies its own DLLs. Windows ARM64 is not supported.
 As with PyTorch itself, Windows needs the Microsoft Visual C++ x64 runtime
@@ -97,6 +97,36 @@ To run native tests on Windows, install ``pytest``, configure again with
 ``-DBUILD_TESTS=ON``, and rebuild. Add the active environment's
 ``Lib\site-packages\torch\lib`` directory to PATH before running
 ``ctest --test-dir build -C Release --output-on-failure``.
+
+Windows CUDA source builds
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+CUDA is opt-in for Windows x64 source builds; published Windows wheels remain
+CPU-only. Install a CUDA Toolkit compatible with the CUDA-enabled PyTorch
+build and your NVIDIA driver, then use the same x64 developer prompt and
+environment as above. For PyTorch 2.10.0 with CUDA 13.0:
+
+.. code-block:: bat
+
+  python -m pip install --force-reinstall --no-deps "torch==2.10.0" --index-url https://download.pytorch.org/whl/cu130
+  python -m pip install "cmake>=3.24,<4" pytest build
+  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DCMAKE_CUDA_COMPILER="%CUDA_PATH%\bin\nvcc.exe"
+  cmake --build build --parallel 2
+  python -m build --wheel --no-isolation
+  python -m pip install --no-index --no-deps --force-reinstall --find-links=dist pydisort
+  python -m pytest tests -v -rs
+
+``CUDA_PATH`` must point to the intended toolkit. ``native`` targets the local
+GPU; for distribution, specify the compute capabilities of the intended GPUs
+instead (for example, ``120`` for an RTX 5060). When changing toolkits, use a
+fresh CMake build directory. CPU-only PyTorch installations cannot build or
+load a CUDA-enabled solver.
+
+The CUDA kernels and Windows dispatcher are compiled into the same solver
+DLL. The Python binding remains a C++ extension, with no second compilation
+of the CUDA sources. The wheel does not vendor PyTorch or CUDA runtime DLLs;
+install the matching CUDA-enabled PyTorch before loading it. CUDA tests must
+run, rather than skip, when validating a CUDA build.
 
 Verify the installation
 -----------------------

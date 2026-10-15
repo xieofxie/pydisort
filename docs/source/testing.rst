@@ -33,6 +33,14 @@ unrelated PyPI release. Then enable the full CTest suite:
 To include the examples as tests, configure with ``-DBUILD_EXAMPLES=ON``; they
 are also runnable directly through pytest (see below).
 
+For CUDA validation, build with ``-DCUDA=ON`` and CUDA-enabled PyTorch, then
+run ``python -m pytest tests -v -rs`` on an NVIDIA GPU. This includes
+``tests/cuda``; skipped GPU tests do not validate the CUDA implementation.
+On Windows, follow the CUDA source-build instructions in :doc:`installation`.
+The Windows wheel test runs a solver in an isolated subprocess with the build
+and toolkit directories removed from PATH, on both CPU and CUDA when a GPU
+is available.
+
 What is tested
 --------------
 

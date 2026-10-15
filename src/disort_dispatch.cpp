@@ -54,8 +54,16 @@ namespace at::native {
 void call_disort(c10::DeviceType device, at::TensorIterator& iter, int upward,
                  bool force_general, disort_state* ds, disort_output* ds_out,
                  at::Tensor* cuda_workspace) {
+#ifdef PYDISORT_WITH_CUDA
+  if (device == c10::DeviceType::CUDA) {
+    disort::call_disort_cuda(iter, upward, force_general, ds, ds_out,
+                             cuda_workspace);
+    return;
+  }
+#endif
   TORCH_CHECK(device == c10::DeviceType::CPU,
-              "Windows pydisort builds support CPU tensors only");
+              "pydisort was not built with support for device ", device,
+              "; CUDA tensors require a build configured with -DCUDA=ON");
   disort::call_disort_cpu(iter, upward, force_general, ds, ds_out,
                           cuda_workspace);
 }
