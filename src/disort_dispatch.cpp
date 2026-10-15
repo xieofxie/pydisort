@@ -50,7 +50,18 @@ void call_disort_cpu(at::TensorIterator& iter, int upward, bool force_general,
 
 namespace at::native {
 
+#ifdef _WIN32
+void call_disort(c10::DeviceType device, at::TensorIterator& iter, int upward,
+                 bool force_general, disort_state* ds, disort_output* ds_out,
+                 at::Tensor* cuda_workspace) {
+  TORCH_CHECK(device == c10::DeviceType::CPU,
+              "Windows pydisort builds support CPU tensors only");
+  disort::call_disort_cpu(iter, upward, force_general, ds, ds_out,
+                          cuda_workspace);
+}
+#else
 DEFINE_DISPATCH(call_disort);
 REGISTER_ALL_CPU_DISPATCH(call_disort, &disort::call_disort_cpu);
+#endif
 
 }  // namespace at::native

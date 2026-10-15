@@ -47,6 +47,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
 ]
 
 [project.urls]

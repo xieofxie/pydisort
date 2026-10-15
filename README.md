@@ -59,9 +59,9 @@
   <img alt="license"
     src="https://img.shields.io/badge/License-GPL-yellow.svg?style=flat-square&logo=gnu"/>
 </a>
-<a href="https://img.shields.io/badge/OS-Linux%2C%20MacOS-orange">
+<a href="https://img.shields.io/badge/OS-Linux%2C%20MacOS%2C%20Windows-orange">
   <img alt="os"
-    src="https://img.shields.io/badge/OS-linux%2C%20mac-orange?style=flat-square&logo=linux"/>
+    src="https://img.shields.io/badge/OS-linux%2C%20mac%2C%20windows-orange?style=flat-square&logo=linux"/>
 </a>
 </p>
 
@@ -128,7 +128,8 @@ pip install pydisort
 ```
 
 Prebuilt wheels cover CPython 3.10–3.14 on Linux x86-64
-(glibc 2.28 or newer with PyTorch) and Apple Silicon macOS 15 or newer.
+(glibc 2.28 or newer with PyTorch), Apple Silicon macOS 15 or newer,
+and Windows x64 (CPU only).
 `pip` installs the required PyTorch version automatically.
 The release workflow publishes wheels only, so there is no automatic source-build
 fallback when a wheel does not match. See the
@@ -346,9 +347,12 @@ configuration being timed is written down once rather than copied. See
 
 ### Build requirements
 
-Use CMake 3.20 or newer, a C++17 compiler (GCC 9 or newer on Linux, or
-compatible Apple Clang on macOS), and a supported CPython version.
+Use CMake 3.20 or newer, a C++17 compiler (GCC 9 or newer on Linux,
+compatible Apple Clang on macOS, or Visual Studio 2022 on Windows x64),
+and a supported CPython version.
 PyTorch must be installed in the active environment before running CMake.
+For Windows developer-shell commands, see the
+[installation guide](https://pydisort.readthedocs.io/en/latest/installation.html).
 
 ### Build the C++ wrapper
 

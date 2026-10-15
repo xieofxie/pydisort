@@ -15,12 +15,13 @@
 
 // disort
 #include <cdisort213/cdisort.hpp>
+#include <disort_export.h>
 
 #include "add_arg.h"
 
 namespace disort {
 
-struct DisortOptionsImpl {
+struct PYDISORT_API DisortOptionsImpl {
   DisortOptionsImpl();
   static std::shared_ptr<DisortOptionsImpl> create() {
     return std::make_shared<DisortOptionsImpl>();
@@ -116,7 +117,7 @@ struct DisortOptionsImpl {
  */
 using DisortOptions = std::shared_ptr<DisortOptionsImpl>;
 
-class DisortImpl : public torch::nn::Cloneable<DisortImpl> {
+class PYDISORT_API DisortImpl : public torch::nn::Cloneable<DisortImpl> {
  public:
   //! options with which this `DisortImpl` was constructed
   DisortOptions options;

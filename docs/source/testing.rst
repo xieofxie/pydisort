@@ -274,13 +274,18 @@ Every pull request and every push to ``main`` runs, through GitHub Actions
 (``.github/workflows/ci.yml``):
 
 * ``pre-commit`` style checks, including ``cpplint`` and ``cppcheck``;
-* a CMake build and the full CTest suite on **Ubuntu and macOS**, against
+* a CMake build and the full CTest suite on **Ubuntu, macOS and Windows x64**, against
   **Python 3.11 and 3.14**;
 * a regular install using ``pip install --no-build-isolation --no-deps .``
-  before CTest runs, exercising the packaging step as well as the C++ build.
+  on Linux/macOS before CTest runs, exercising the packaging step as well as
+  the C++ build;
+* a CPU-only Windows wheel build and install, followed by pytest outside
+  the checkout and CTest. ``test_windows_wheel.py`` checks that the solver DLL
+  is bundled and imports without build-tree directories on PATH.
 
 Release wheels are built for CPython 3.10-3.14 with ``cibuildwheel``
-(``.github/workflows/cd.yml`` and ``release.yml``).
+(``.github/workflows/cd.yml`` and ``release.yml``). Windows release wheels
+also run pytest in cibuildwheel's isolated test environment before publishing.
 
 Benchmark thread-control checks, the documentation renderer tests and the
 source-tree setup-guidance check are :ref:`separate developer checks

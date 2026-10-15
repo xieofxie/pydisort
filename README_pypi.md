@@ -43,7 +43,8 @@ pip install pydisort
 ```
 
 Prebuilt wheels cover CPython 3.10–3.14 on Linux x86-64
-(glibc 2.28 or newer with PyTorch) and Apple Silicon macOS 15 or newer.
+(glibc 2.28 or newer with PyTorch), Apple Silicon macOS 15 or newer,
+and Windows x64 (CPU only).
 `pip` installs the required PyTorch automatically. The release workflow
 publishes wheels only: if no wheel matches, follow the
 [source-build instructions](https://pydisort.readthedocs.io/en/latest/installation.html)

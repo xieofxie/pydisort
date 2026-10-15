@@ -39,6 +39,11 @@ add_library(${namel}_${buildl}
     ${src_files}
     )
 
+include(GenerateExportHeader)
+generate_export_header(${namel}_${buildl}
+    EXPORT_MACRO_NAME PYDISORT_API
+    EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/disort_export.h")
+
 set_target_properties(${namel}_${buildl}
     PROPERTIES
     COMPILE_FLAGS "${CMAKE_CXX_FLAGS_${buildu}}"

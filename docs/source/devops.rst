@@ -45,7 +45,7 @@ PyPI** against that tag.
 The ``ci.yml`` workflow
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Two jobs, the second gated on the first.
+The Linux/macOS and Windows build jobs both depend on the style-check job.
 
 ``pre-commit`` runs the hooks from ``.pre-commit-config.yaml`` across the whole
 repository, with ``~/.cache/pre-commit`` cached against the hash of that file so
@@ -63,6 +63,12 @@ hook environments are not rebuilt on every run.
 
 CI exercises Python 3.11 and 3.14, not every supported Python version; ``release.yml`` builds
 wheels for every version from 3.10 to 3.14.
+
+``build-and-test-windows`` uses ``windows-2022`` with x64 Python 3.11 and
+3.14, MSVC and Ninja. It builds the CPU library, builds and installs a wheel,
+runs pytest outside the checkout, then runs CTest. The installed-wheel test
+also imports in a subprocess with build directories removed from PATH to
+verify that the solver DLL is packaged correctly.
 
 On Linux, ``torch`` comes from the CPU index so the runner does not download a
 multi-gigabyte CUDA wheel it has no use for:
@@ -142,15 +148,26 @@ Triggered by hand, taking the tag to publish and a choice of platforms:
             required: true
           build_os:
             description: "OS"
-            default: "Both"
+            default: "All"
             type: choice
-            options: [Both, MacOS, Ubuntu]
+            options: [All, Both, MacOS, Ubuntu, Windows]
 
 ``build-macos`` and ``build-linux`` each run ``cibuildwheel`` over Python 3.10
 to 3.14, producing ``arm64`` wheels on macOS and ``x86_64`` on Linux. Both skip
 free-threaded builds (``*t-*``), because the pybind11 extension is not declared
 free-threaded safe and cibuildwheel would otherwise build ``cp3XXt`` on 3.14 and
 later. Linux additionally skips ``musllinux``.
+
+``build-windows`` builds CPU-only ``win_amd64`` wheels for Python 3.10-3.14
+on ``windows-2022`` with MSVC and Ninja, skipping free-threaded builds.
+``All`` selects all three platforms; ``Both`` retains its original meaning
+of macOS and Linux only. ``Windows`` selects just Windows x64.
+The Windows build disables build isolation to use the same PyTorch
+installation for CMake and the bindings, bundles the solver DLL beside the
+extension, and tests the installed wheel with pytest before uploading it.
+Automatic Windows wheel repair is disabled because the solver DLL is already
+packaged and PyTorch supplies its own libraries. It does not bundle PyTorch's
+DLLs or build Windows CUDA/ARM64 wheels.
 
 Two details matter for a compiled PyTorch extension:
 
@@ -207,8 +224,15 @@ written to ``build/lib``.
 
 Two subdirectories build the library itself. ``cdisort213/`` is a header-only
 ``INTERFACE`` target exposed as ``pydisort::cdisort``, and ``src/`` compiles the
-C++ wrapper into ``libdisort_<buildtype>`` and exposes it as
+C++ wrapper into ``libdisort_<buildtype>`` (``disort_<buildtype>.dll`` on
+Windows) and exposes it as
 ``pydisort::disort``.
+
+Windows uses MSVC with the shared runtime. CMake generates the public
+``disort_export.h`` header for DLL exports and copies public headers into
+``build/disort`` so a checkout does not need Windows symlink privileges.
+The Windows CPU path calls the CPU kernel directly rather than using
+PyTorch's private dispatch macros, which mark custom stubs as DLL imports.
 
 The two-step build
 ~~~~~~~~~~~~~~~~~~
@@ -234,7 +258,9 @@ The extension is linked with rpath entries for ``@loader_path/lib`` and
 ``@loader_path/../torch/lib`` (``$ORIGIN`` on Linux), so at import time it
 resolves both the disort library and torch's own shared objects.
 ``setup.py`` also chooses between ``CppExtension`` and ``CUDAExtension``
-depending on whether ``torch.cuda.is_available()``.
+depending on whether ``torch.cuda.is_available()`` on Linux/macOS. Windows
+always uses ``CppExtension`` and packages the solver DLL next to the
+``.pyd`` instead of using Unix rpaths.
 
 Reference articles
 ~~~~~~~~~~~~~~~~~~

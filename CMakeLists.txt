@@ -8,6 +8,10 @@ option(CUDA "Enable CUDA support" OFF)
 option(BUILD_EXAMPLES "Build examples" OFF)
 option(BUILD_TESTS "Build tests" ON)
 
+if(WIN32 AND CUDA)
+  message(FATAL_ERROR "Windows builds currently support CPU only; use -DCUDA=OFF.")
+endif()
+
 if (CUDA)
   project(
     pydisort
@@ -38,7 +42,9 @@ endif()
 
 # Set the _GLIBCXX_USE_CXX11_ABI flag to 0 (use old ABI)
 #add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=${_ABI_OUTPUT})
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=${_ABI_OUTPUT})
+endif()
 
 # Set MacOS deployment target
 set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
@@ -74,6 +80,22 @@ endforeach()
 # set output directories
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+if(WIN32)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+  foreach(config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config} "${CMAKE_BINARY_DIR}/lib")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${config} "${CMAKE_BINARY_DIR}/lib")
+  endforeach()
+
+  # Windows checkouts may materialize the disort -> src symlink as a text file.
+  file(GLOB public_headers "${CMAKE_SOURCE_DIR}/src/*.h"
+                           "${CMAKE_SOURCE_DIR}/src/*.hpp")
+  foreach(header ${public_headers})
+    get_filename_component(header_name "${header}" NAME)
+    configure_file("${header}" "${CMAKE_BINARY_DIR}/disort/${header_name}" COPYONLY)
+  endforeach()
+endif()
 
 message(STATUS "${Blue}${PROJECT_NAME}-1. Set up project compiler flags ...${ColorReset}")
 message(STATUS "Include ${CMAKE_CURRENT_SOURCE_DIR}/cmake/compilers.cmake")

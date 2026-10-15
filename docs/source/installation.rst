@@ -29,17 +29,20 @@ Supported platforms
      - x86-64, glibc 2.28 or newer (including the PyTorch dependency)
    * - macOS wheels
      - Apple Silicon (arm64), macOS 15 or newer
+   * - Windows wheels
+     - x64 (AMD64), CPU only
    * - Dependencies
      - ``numpy``, ``torch`` (installed automatically)
 
 The release workflow targets these platforms; consult the
 `PyPI download files <https://pypi.org/project/pydisort/#files>`_ for available
-wheels. The workflow does not build wheels for Windows, Intel macOS, Linux ARM
+wheels. The workflow does not build wheels for Windows ARM64, Intel macOS, Linux ARM
 or free-threaded Python. A source build is not a guarantee of support on those
 targets.
 
 The glibc floor of 2.28 is inherited from PyTorch v2.7 and later. Wheels are
-built and published automatically with ``cibuildwheel`` through GitHub Actions.
+built with ``cibuildwheel`` through the manually triggered GitHub Actions
+publishing workflow.
 
 Installing from source
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +50,7 @@ Installing from source
 PyPI releases publish wheels, not a source distribution. If no wheel matches,
 ``pip install pydisort`` cannot automatically fall back to a source build.
 Build from a repository checkout instead. Use the same activated Python
-environment for CMake and pip:
+environment for CMake and pip. On Linux and macOS:
 
 .. code-block:: bash
 
@@ -67,6 +70,33 @@ newer on Linux, or a compatible Apple Clang on macOS). CMake builds the C++
 library first; ``setup.py`` only builds the Python bindings and links that
 library. Build isolation is disabled to keep both stages on the same PyTorch
 installation. To reproduce a release, check out its tag before building.
+
+On Windows x64, install Visual Studio 2022's **Desktop development with C++**
+workload and use its **x64 Native Tools Command Prompt**. From the repository
+root, with x64 Python on PATH:
+
+.. code-block:: bat
+
+  python -m venv env
+  call env\Scripts\activate.bat
+  python -m pip install --upgrade pip
+  python -m pip install "torch==2.10.0" numpy "cmake>=3.20,<4" ninja setuptools "setuptools-scm>=8" wheel
+  set DISTUTILS_USE_SDK=1
+  set MAX_JOBS=2
+  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DCUDA=OFF
+  cmake --build build --parallel 2
+  python -m pip install --no-build-isolation .
+
+Windows builds support CPU tensors only, even with a CUDA-enabled PyTorch
+installation. The wheel bundles the solver DLL beside the Python extension;
+PyTorch supplies its own DLLs. Windows ARM64 is not supported.
+As with PyTorch itself, Windows needs the Microsoft Visual C++ x64 runtime
+(Visual C++ Redistributable for Visual Studio 2015-2022).
+
+To run native tests on Windows, install ``pytest``, configure again with
+``-DBUILD_TESTS=ON``, and rebuild. Add the active environment's
+``Lib\site-packages\torch\lib`` directory to PATH before running
+``ctest --test-dir build -C Release --output-on-failure``.
 
 Verify the installation
 -----------------------
