@@ -166,7 +166,7 @@ jobs:
           path: wheelhouse/*.whl
 
   build-windows:
-    name: Build Windows x64 Wheels (CPU)
+    name: Build Windows x64 Wheels
     if: ${{ github.event.inputs.build_os == 'All' || github.event.inputs.build_os == 'Windows' }}
     runs-on: windows-2022
     strategy:
@@ -195,6 +195,14 @@ jobs:
         with:
           arch: x64
 
+      - name: Set up CUDA
+        uses: Jimver/cuda-toolkit@v0.2.36
+        with:
+          cuda: "13.0.2"
+          method: network
+          sub-packages: '["nvcc", "crt", "nvvm", "cudart", "thrust", "cublas_dev", "cusolver_dev", "cusparse_dev", "curand_dev"]'
+          log-file-suffix: "python-${{ matrix.python-version }}.txt"
+
       - name: Configure Windows Build Env
         run: |
           $pv = "${{ matrix.python-version }}".Replace(".", "")
@@ -210,9 +218,13 @@ jobs:
           # setup.py bundles the solver DLL; PyTorch owns its runtime DLLs.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
           CIBW_BEFORE_BUILD: >-
-            python -m pip install numpy "torch==2.10.0" "cmake>=3.20,<4" ninja setuptools "setuptools-scm>=8" wheel build
-            && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DCUDA=OFF
+            python -m pip install "torch==2.10.0+cu130" --index-url https://download.pytorch.org/whl/cu130
+            && python -m pip install numpy "cmake>=3.24,<4" ninja setuptools "setuptools-scm>=8" wheel build
+            && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DCUDA=ON
+            -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;90-real;100-real;120"
+            -DCMAKE_CUDA_COMPILER="%CUDA_PATH%\bin\nvcc.exe"
             && cmake --build build --parallel 2
+          CIBW_BEFORE_TEST: 'python -m pip install "torch==2.10.0+cu130" --index-url https://download.pytorch.org/whl/cu130'
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: 'python -m pytest "{project}\tests" -q'
         run: |

@@ -293,7 +293,10 @@ Every pull request and every push to ``main`` runs, through GitHub Actions
 
 Release wheels are built for CPython 3.10-3.14 with ``cibuildwheel``
 (``.github/workflows/cd.yml`` and ``release.yml``). Windows release wheels
-also run pytest in cibuildwheel's isolated test environment before publishing.
+enable CUDA and run pytest with CUDA-enabled PyTorch in cibuildwheel's isolated
+test environment before publishing. Hosted Windows runners have no GPU, so
+these tests exercise CPU execution and DLL loading; CUDA execution must also
+be validated on an NVIDIA GPU.
 
 Benchmark thread-control checks, the documentation renderer tests and the
 source-tree setup-guidance check are :ref:`separate developer checks

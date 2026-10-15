@@ -44,9 +44,16 @@ pip install pydisort
 
 Prebuilt wheels cover CPython 3.10–3.14 on Linux x86-64
 (glibc 2.28 or newer with PyTorch), Apple Silicon macOS 15 or newer,
-and Windows x64 (CPU only).
-`pip` installs the required PyTorch automatically. The release workflow
-publishes wheels only: if no wheel matches, follow the
+and Windows x64. Linux and Windows wheels support CPU and CUDA tensors.
+On Windows, install CUDA-enabled PyTorch before pydisort:
+
+```sh
+python -m pip install "torch==2.10.0+cu130" --index-url https://download.pytorch.org/whl/cu130
+python -m pip install pydisort
+```
+
+On Linux and macOS, `pip` installs the required PyTorch automatically.
+The release workflow publishes wheels only: if no wheel matches, follow the
 [source-build instructions](https://pydisort.readthedocs.io/en/latest/installation.html)
 to build the C++ library with CMake before installing the Python bindings.
 

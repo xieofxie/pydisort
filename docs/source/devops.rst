@@ -158,7 +158,7 @@ free-threaded builds (``*t-*``), because the pybind11 extension is not declared
 free-threaded safe and cibuildwheel would otherwise build ``cp3XXt`` on 3.14 and
 later. Linux additionally skips ``musllinux``.
 
-``build-windows`` builds CPU-only ``win_amd64`` wheels for Python 3.10-3.14
+``build-windows`` builds ``win_amd64`` wheels for Python 3.10-3.14
 on ``windows-2022`` with MSVC and Ninja, skipping free-threaded builds.
 ``All`` selects all three platforms; ``Both`` retains its original meaning
 of macOS and Linux only. ``Windows`` selects just Windows x64.
@@ -166,15 +166,17 @@ The Windows build disables build isolation to use the same PyTorch
 installation for CMake and the bindings, bundles the solver DLL beside the
 extension, and tests the installed wheel with pytest before uploading it.
 Automatic Windows wheel repair is disabled because the solver DLL is already
-packaged and PyTorch supplies its own libraries. It does not bundle PyTorch's
-DLLs or build Windows CUDA/ARM64 wheels.
+packaged and PyTorch supplies its own libraries.
 
 Two details matter for a compiled PyTorch extension:
 
 - ``CIBW_BEFORE_BUILD`` configures and builds the C++ library first, pointing
   CMake at the installed torch through ``torch.utils.cmake_prefix_path``. The
   Linux job does this inside ``pytorch/manylinux2_28-builder:cuda12.8`` and
-  configures with ``-DCUDA=ON``.
+  configures with ``-DCUDA=ON``. Windows also enables CUDA, using Toolkit
+  13.0.2 and PyTorch ``2.10.0+cu130`` for both building and testing. Its GPU
+  targets are explicit because hosted runners have no GPU to auto-detect.
+  macOS leaves CUDA disabled.
 - The repair step deliberately leaves the torch libraries out of the wheel,
   using ``delocate-wheel -e torch -e disort_release`` on macOS and
   ``auditwheel repair --exclude lib*.so`` on Linux. Vendoring them would
@@ -234,8 +236,7 @@ Windows uses MSVC with the shared runtime. CMake generates the public
 The Windows dispatcher calls the CPU or CUDA kernel directly rather than
 using PyTorch's private dispatch macros, which mark custom stubs as DLL
 imports. With ``-DCUDA=ON``, CMake compiles CUDA sources into the same solver
-DLL and requires a CUDA-enabled PyTorch installation. The default and the
-Windows release workflow remain CPU-only.
+DLL and requires a CUDA-enabled PyTorch installation.
 
 The two-step build
 ~~~~~~~~~~~~~~~~~~

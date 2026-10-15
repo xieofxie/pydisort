@@ -12,7 +12,18 @@ matching platform:
 
   python -m pip install pydisort
 
-``pip`` pulls in a compatible ``torch`` automatically.
+On Linux and macOS, ``pip`` pulls in a compatible ``torch`` automatically.
+On Windows, install CUDA-enabled PyTorch first, then pydisort:
+
+.. code-block:: bat
+
+  python -m pip install "torch==2.10.0+cu130" --index-url https://download.pytorch.org/whl/cu130
+  python -m pip install pydisort
+
+Windows release wheels require this PyTorch variant even for CPU calculations;
+the default Windows PyTorch wheel on PyPI is CPU-only. A CUDA Toolkit is not
+needed to use a prebuilt wheel. GPU calculations require a CUDA 13-compatible
+NVIDIA driver and a GPU supported by PyTorch; CPU calculations do not need a GPU.
 
 Supported platforms
 ~~~~~~~~~~~~~~~~~~~
@@ -30,9 +41,9 @@ Supported platforms
    * - macOS wheels
      - Apple Silicon (arm64), macOS 15 or newer
    * - Windows wheels
-     - x64 (AMD64), CPU only
+     - x64 (AMD64), CPU and CUDA 13.0
    * - Dependencies
-     - ``numpy``, ``torch`` (installed automatically)
+     - ``numpy``, ``torch==2.10.0`` (Windows: ``torch==2.10.0+cu130``)
 
 The release workflow targets these platforms; consult the
 `PyPI download files <https://pypi.org/project/pydisort/#files>`_ for available
@@ -73,60 +84,54 @@ installation. To reproduce a release, check out its tag before building.
 
 On Windows x64, install Visual Studio 2022's **Desktop development with C++**
 workload and use its **x64 Native Tools Command Prompt**. From the repository
-root, with x64 Python on PATH:
+root, with x64 Python on PATH, prepare one environment for either CPU or CUDA:
 
 .. code-block:: bat
 
   python -m venv env
   call env\Scripts\activate.bat
   python -m pip install --upgrade pip
-  python -m pip install "torch==2.10.0" numpy "cmake>=3.20,<4" ninja setuptools "setuptools-scm>=8" wheel
+  python -m pip install "torch==2.10.0" numpy "cmake>=3.24,<4" ninja setuptools "setuptools-scm>=8" wheel pytest
   set DISTUTILS_USE_SDK=1
   set MAX_JOBS=2
-  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DCUDA=OFF
-  cmake --build build --parallel 2
-  python -m pip install --no-build-isolation .
 
-This configuration supports CPU tensors only, even with a CUDA-enabled PyTorch
-installation. The wheel bundles the solver DLL beside the Python extension;
-PyTorch supplies its own DLLs. Windows ARM64 is not supported.
-As with PyTorch itself, Windows needs the Microsoft Visual C++ x64 runtime
-(Visual C++ Redistributable for Visual Studio 2015-2022).
+Choose one configuration. Without CUDA:
 
-To run native tests on Windows, install ``pytest``, configure again with
-``-DBUILD_TESTS=ON``, and rebuild. Add the active environment's
-``Lib\site-packages\torch\lib`` directory to PATH before running
-``ctest --test-dir build -C Release --output-on-failure``.
+.. code-block:: bat
 
-Windows CUDA source builds
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=OFF
 
-CUDA is opt-in for Windows x64 source builds; published Windows wheels remain
-CPU-only. Install a CUDA Toolkit compatible with the CUDA-enabled PyTorch
-build and your NVIDIA driver, then use the same x64 developer prompt and
-environment as above. For PyTorch 2.10.0 with CUDA 13.0:
+Or, for CUDA, install a toolkit compatible with PyTorch and your NVIDIA driver,
+and point ``CUDA_PATH`` to it. For PyTorch 2.10.0 with CUDA 13.0:
 
 .. code-block:: bat
 
   python -m pip install --force-reinstall --no-deps "torch==2.10.0" --index-url https://download.pytorch.org/whl/cu130
-  python -m pip install "cmake>=3.24,<4" pytest build
   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DCMAKE_CUDA_COMPILER="%CUDA_PATH%\bin\nvcc.exe"
+
+``native`` targets the local GPU; for distribution, specify the intended compute
+capabilities instead (for example, ``120`` for an RTX 5060). Use a fresh CMake
+build directory when changing toolkits.
+
+Build, install and test either configuration with the same commands:
+
+.. code-block:: bat
+
   cmake --build build --parallel 2
-  python -m build --wheel --no-isolation
-  python -m pip install --no-index --no-deps --force-reinstall --find-links=dist pydisort
+  python -m pip install --no-build-isolation .
   python -m pytest tests -v -rs
 
-``CUDA_PATH`` must point to the intended toolkit. ``native`` targets the local
-GPU; for distribution, specify the compute capabilities of the intended GPUs
-instead (for example, ``120`` for an RTX 5060). When changing toolkits, use a
-fresh CMake build directory. CPU-only PyTorch installations cannot build or
-load a CUDA-enabled solver.
+For the CPU configuration, use CPU-only PyTorch or hide GPUs when running tests
+(``set CUDA_VISIBLE_DEVICES=-1``); the GPU tests require a CUDA-enabled solver.
+For CUDA validation, keep the GPU visible and check that those tests run rather
+than skip.
 
-The CUDA kernels and Windows dispatcher are compiled into the same solver
-DLL. The Python binding remains a C++ extension, with no second compilation
-of the CUDA sources. The wheel does not vendor PyTorch or CUDA runtime DLLs;
-install the matching CUDA-enabled PyTorch before loading it. CUDA tests must
-run, rather than skip, when validating a CUDA build.
+To run CTest, add the environment's ``Lib\site-packages\torch\lib`` directory
+to PATH, then run ``ctest --test-dir build -C Release --output-on-failure``.
+The wheel bundles the solver DLL; PyTorch supplies its runtime DLLs, so CUDA
+builds require CUDA-enabled PyTorch at runtime too. Windows also needs the
+Microsoft Visual C++ x64 runtime (Visual C++ Redistributable for Visual Studio
+2015-2022).
 
 Verify the installation
 -----------------------

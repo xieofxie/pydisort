@@ -22,8 +22,8 @@ using disort_fn = void (*)(at::TensorIterator& iter, int upward,
                            disort_output* ds_out, at::Tensor* cuda_workspace);
 
 #ifdef _WIN32
-// PyTorch's private dispatch macros import custom stubs from its DLL on
-// Windows.
+// DECLARE_DISPATCH and REGISTER_* use TORCH_API (dllimport here), so MSVC
+// cannot define this library's stub and CPU registrations.
 void call_disort(c10::DeviceType device, at::TensorIterator& iter, int upward,
                  bool force_general, disort_state* ds, disort_output* ds_out,
                  at::Tensor* cuda_workspace);
