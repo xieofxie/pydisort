@@ -88,3 +88,57 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib:${{ env.LD_LIBRARY_PATH }}
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/build/lib:${{ env.DYLD_LIBRARY_PATH }}
+
+  build-and-test-windows:
+    needs: pre-commit
+    runs-on: windows-2022
+    env:
+      DISTUTILS_USE_SDK: "1"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.11", "3.14"]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+          cache: pip
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install numpy pytest "torch==2.10.0" "cmake>=3.20,<4" ninja setuptools "setuptools-scm>=8" wheel build
+
+      - name: Build CPU library and tests
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=OFF
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build --parallel 2
+
+      - name: Build and install wheel
+        run: |
+          python -m build --wheel --no-isolation
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $wheel = (Get-ChildItem dist\*.whl).FullName
+          python -m pip install --no-deps $wheel
+        env:
+          MAX_JOBS: "2"
+
+      - name: Test installed wheel outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: python -m pytest "$env:GITHUB_WORKSPACE\tests" -q
+
+      - name: Run C++ and Python tests
+        run: |
+          $torchLib = python -c "import pathlib, torch; print(pathlib.Path(torch.__file__).parent / 'lib')"
+          $env:PATH = "$torchLib;$env:PATH"
+          ctest --test-dir build -C Release --output-on-failure

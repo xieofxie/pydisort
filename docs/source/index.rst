@@ -17,8 +17,8 @@ program, and the C-DISORT publication [2]_ for the C version.
 
   pip install pydisort
 
-Prebuilt wheels are published for CPython 3.10-3.14 on selected Linux and
-macOS targets. No compiler is needed when a wheel matches your platform;
+Prebuilt wheels are published for CPython 3.10-3.14 on selected Linux,
+macOS and Windows targets. No compiler is needed when a wheel matches your platform;
 see :doc:`installation` for architectures, OS requirements and source builds.
 
 Why pydisort?

@@ -19,7 +19,8 @@ macro(add_package name url tag patch option)
         STATUS
           "${Yellow}Using cached library ${name}-${tag}.tar.gz${ColorReset}")
 
-      FetchContent_Declare(${name} DOWNLOAD_COMMAND tar -xzf ${CACHE_FILE} -C
+      # Git object files can be read-only in Windows checkouts.
+      FetchContent_Declare(${name} DOWNLOAD_COMMAND tar --exclude=.git -xzf ${CACHE_FILE} -C
                                                     ${CMAKE_BINARY_DIR}/_deps)
     else()
       FetchContent_Declare(
@@ -37,7 +38,7 @@ macro(add_package name url tag patch option)
       message(
         STATUS
           "${Yellow}Creating cached library ${name}-${tag}.tar.gz${ColorReset}")
-      execute_process(COMMAND tar -czf ${CACHE_DIR}/${name}-${tag}.tar.gz -C
+      execute_process(COMMAND tar --exclude=.git -czf ${CACHE_DIR}/${name}-${tag}.tar.gz -C
                               ${CMAKE_BINARY_DIR}/_deps ${name}-src)
     endif()
   else()

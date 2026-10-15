@@ -1,6 +1,7 @@
 #pragma once
 
 // torch
+#include <disort_export.h>
 #include <torch/torch.h>
 
 namespace disort {
@@ -20,9 +21,8 @@ namespace disort {
  * \param ff Weight of the first Henyey-Greenstein parameter
  * \return 1D tensor of phase moments, size = (npmom,)
  */
-torch::Tensor scattering_moments(int npmom,
-                                 std::string const& type = "isotropic",
-                                 double gg1 = 0., double gg2 = 0.,
-                                 double ff = 0.);
+PYDISORT_API torch::Tensor scattering_moments(
+    int npmom, std::string const& type = "isotropic", double gg1 = 0.,
+    double gg2 = 0., double ff = 0.);
 
 }  // namespace disort

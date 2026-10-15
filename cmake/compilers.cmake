@@ -5,7 +5,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(APPLE)
   message(STATUS "Compiling on MacOS")
-else()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
   add_compile_definitions(HAVE_AVX512_CPU_DEFINITION=1 HAVE_AVX2_CPU_DEFINITION=1)
 endif()
 
@@ -54,10 +54,13 @@ endif()
 # Setup for MSVC compiler (version >= 2012):
 #
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  message(FATAL_ERROR "\n" "MSVC compiler not implemented.\n\n")
-  # set(_flags ${CMAKE_SOURCE_DIR}/cmake/compiler_flags_msvc.cmake)
-  # message(STATUS "Include ${_flags}") include(${_flags}) set(KNOWN_COMPILER
-  # TRUE)
+  add_compile_options(
+    $<$<COMPILE_LANGUAGE:C,CXX>:/bigobj>
+    $<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>
+    $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/bigobj,/utf-8,/Zc:__cplusplus,/Zc:preprocessor>)
+  add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
+  set(KNOWN_COMPILER TRUE)
 endif()
 
 if(NOT KNOWN_COMPILER)

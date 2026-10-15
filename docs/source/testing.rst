@@ -33,6 +33,14 @@ unrelated PyPI release. Then enable the full CTest suite:
 To include the examples as tests, configure with ``-DBUILD_EXAMPLES=ON``; they
 are also runnable directly through pytest (see below).
 
+For CUDA validation, build with ``-DCUDA=ON`` and CUDA-enabled PyTorch, then
+run ``python -m pytest tests -v -rs`` on an NVIDIA GPU. This includes
+``tests/cuda``; skipped GPU tests do not validate the CUDA implementation.
+On Windows, follow the CUDA source-build instructions in :doc:`installation`.
+The Windows wheel test runs a solver in an isolated subprocess with the build
+and toolkit directories removed from PATH, on both CPU and CUDA when a GPU
+is available.
+
 What is tested
 --------------
 
@@ -274,13 +282,21 @@ Every pull request and every push to ``main`` runs, through GitHub Actions
 (``.github/workflows/ci.yml``):
 
 * ``pre-commit`` style checks, including ``cpplint`` and ``cppcheck``;
-* a CMake build and the full CTest suite on **Ubuntu and macOS**, against
+* a CMake build and the full CTest suite on **Ubuntu, macOS and Windows x64**, against
   **Python 3.11 and 3.14**;
 * a regular install using ``pip install --no-build-isolation --no-deps .``
-  before CTest runs, exercising the packaging step as well as the C++ build.
+  on Linux/macOS before CTest runs, exercising the packaging step as well as
+  the C++ build;
+* a CPU-only Windows wheel build and install, followed by pytest outside
+  the checkout and CTest. ``test_windows_wheel.py`` checks that the solver DLL
+  is bundled and imports without build-tree directories on PATH.
 
 Release wheels are built for CPython 3.10-3.14 with ``cibuildwheel``
-(``.github/workflows/cd.yml`` and ``release.yml``).
+(``.github/workflows/cd.yml`` and ``release.yml``). Windows release wheels
+enable CUDA and run pytest with CUDA-enabled PyTorch in cibuildwheel's isolated
+test environment before publishing. Hosted Windows runners have no GPU, so
+these tests exercise CPU execution and DLL loading; CUDA execution must also
+be validated on an NVIDIA GPU.
 
 Benchmark thread-control checks, the documentation renderer tests and the
 source-tree setup-guidance check are :ref:`separate developer checks

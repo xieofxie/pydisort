@@ -1,6 +1,7 @@
 import sys
 import os
 import glob
+import shutil
 from pathlib import Path
 from setuptools import setup
 
@@ -25,7 +26,14 @@ def parse_library_names(libdir):
     library_names = []
     for root, _, files in os.walk(libdir):
         for file in files:
-            if file.endswith((".a", ".so", ".dylib")):
+            if sys.platform == "win32" and file.endswith(".lib"):
+                # Only solver import libraries and the static fmt dependency.
+                if (
+                    Path(root, file).with_suffix(".dll").is_file()
+                    or file == "fmt.lib"
+                ):
+                    library_names.append(Path(file).stem)
+            elif file.endswith((".a", ".so", ".dylib")):
                 file_name = os.path.basename(file)
                 library_names.append(file_name[3:].rsplit(".", 1)[0])
     return library_names
@@ -40,7 +48,9 @@ include_dirs = [
 lib_dirs = [f"{current_dir}/build/lib"]
 libraries = parse_library_names(f"{current_dir}/build/lib")
 
-if sys.platform == "darwin":
+if sys.platform == "win32":
+    extra_link_args = []
+elif sys.platform == "darwin":
     extra_link_args = [
         "-Wl,-rpath,@loader_path/lib",
         "-Wl,-rpath,@loader_path/../torch/lib",
@@ -51,7 +61,34 @@ else:
         "-Wl,-rpath,$ORIGIN/../torch/lib",
     ]
 
-if torch.cuda.is_available():
+
+class BuildExtension(cpp_extension.BuildExtension):
+    def run(self):
+        super().run()
+        if sys.platform == "win32":
+            dlls = list(Path(lib_dirs[0]).glob("*.dll"))
+            if not dlls:
+                raise FileNotFoundError(
+                    "No solver DLL found in build/lib; run CMake first."
+                )
+            destination = Path(
+                self.get_ext_fullpath("pydisort.pydisort")
+            ).parent
+            for dll in dlls:
+                shutil.copy2(dll, destination / dll.name)
+
+    def get_outputs(self):
+        outputs = super().get_outputs()
+        if sys.platform == "win32":
+            destination = Path(
+                self.get_ext_fullpath("pydisort.pydisort")
+            ).parent
+            outputs.extend(str(p) for p in destination.glob("*.dll"))
+        return outputs
+
+
+# Windows CUDA kernels are linked into the solver DLL by CMake.
+if sys.platform != "win32" and torch.cuda.is_available():
     ext_module = cpp_extension.CUDAExtension(
         name="pydisort.pydisort",
         sources=glob.glob("python/csrc/*.cpp")
@@ -69,6 +106,9 @@ else:
         include_dirs=include_dirs,
         library_dirs=lib_dirs,
         libraries=libraries,
+        extra_compile_args=["/bigobj", "/utf-8"]
+        if sys.platform == "win32"
+        else [],
         extra_link_args=extra_link_args,
     )
 
@@ -76,5 +116,5 @@ setup(
     package_dir={"pydisort": "python"},
     packages=["pydisort"],
     ext_modules=[ext_module],
-    cmdclass={"build_ext": cpp_extension.BuildExtension},
+    cmdclass={"build_ext": BuildExtension},
 )

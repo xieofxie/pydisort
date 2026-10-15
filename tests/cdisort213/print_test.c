@@ -1,5 +1,6 @@
 
 #include <cdisort.hpp>
+#include <vector>
 
 /*========================== print_test() ================================*/
 
@@ -48,8 +49,8 @@ void print_test(disort_state  *ds_calc,
     // c_ratio();
   double
     flxmax,umax,fnoise,unoise,
-    rat1,rat2,rat3,rat4,
-    ratv[ds_good->nphi];
+    rat1,rat2,rat3,rat4;
+  std::vector<double> ratv(ds_good->nphi);
 
   flxmax = 0.0;
   for (lu = 0; lu < ds_good->ntau; lu++) {

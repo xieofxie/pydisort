@@ -23,6 +23,8 @@ target_include_directories(${namel}_${buildl}
     ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
 
-target_link_libraries(${namel}_${buildl} INTERFACE m)
+if(NOT WIN32)
+  target_link_libraries(${namel}_${buildl} INTERFACE m)
+endif()
 
 add_library(pydisort::cdisort ALIAS ${namel}_${buildl})

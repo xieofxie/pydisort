@@ -12,7 +12,18 @@ matching platform:
 
   python -m pip install pydisort
 
-``pip`` pulls in a compatible ``torch`` automatically.
+On Linux and macOS, ``pip`` pulls in a compatible ``torch`` automatically.
+On Windows, install CUDA-enabled PyTorch first, then pydisort:
+
+.. code-block:: bat
+
+  python -m pip install "torch==2.10.0+cu130" --index-url https://download.pytorch.org/whl/cu130
+  python -m pip install pydisort
+
+Windows release wheels require this PyTorch variant even for CPU calculations;
+the default Windows PyTorch wheel on PyPI is CPU-only. A CUDA Toolkit is not
+needed to use a prebuilt wheel. GPU calculations require a CUDA 13-compatible
+NVIDIA driver and a GPU supported by PyTorch; CPU calculations do not need a GPU.
 
 Supported platforms
 ~~~~~~~~~~~~~~~~~~~
@@ -29,17 +40,20 @@ Supported platforms
      - x86-64, glibc 2.28 or newer (including the PyTorch dependency)
    * - macOS wheels
      - Apple Silicon (arm64), macOS 15 or newer
+   * - Windows wheels
+     - x64 (AMD64), CPU and CUDA 13.0
    * - Dependencies
-     - ``numpy``, ``torch`` (installed automatically)
+     - ``numpy``, ``torch==2.10.0`` (Windows: ``torch==2.10.0+cu130``)
 
 The release workflow targets these platforms; consult the
 `PyPI download files <https://pypi.org/project/pydisort/#files>`_ for available
-wheels. The workflow does not build wheels for Windows, Intel macOS, Linux ARM
+wheels. The workflow does not build wheels for Windows ARM64, Intel macOS, Linux ARM
 or free-threaded Python. A source build is not a guarantee of support on those
 targets.
 
 The glibc floor of 2.28 is inherited from PyTorch v2.7 and later. Wheels are
-built and published automatically with ``cibuildwheel`` through GitHub Actions.
+built with ``cibuildwheel`` through the manually triggered GitHub Actions
+publishing workflow.
 
 Installing from source
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +61,7 @@ Installing from source
 PyPI releases publish wheels, not a source distribution. If no wheel matches,
 ``pip install pydisort`` cannot automatically fall back to a source build.
 Build from a repository checkout instead. Use the same activated Python
-environment for CMake and pip:
+environment for CMake and pip. On Linux and macOS:
 
 .. code-block:: bash
 
@@ -67,6 +81,57 @@ newer on Linux, or a compatible Apple Clang on macOS). CMake builds the C++
 library first; ``setup.py`` only builds the Python bindings and links that
 library. Build isolation is disabled to keep both stages on the same PyTorch
 installation. To reproduce a release, check out its tag before building.
+
+On Windows x64, install Visual Studio 2022's **Desktop development with C++**
+workload and use its **x64 Native Tools Command Prompt**. From the repository
+root, with x64 Python on PATH, prepare one environment for either CPU or CUDA:
+
+.. code-block:: bat
+
+  python -m venv env
+  call env\Scripts\activate.bat
+  python -m pip install --upgrade pip
+  python -m pip install "torch==2.10.0" numpy "cmake>=3.24,<4" ninja setuptools "setuptools-scm>=8" wheel pytest
+  set DISTUTILS_USE_SDK=1
+  set MAX_JOBS=2
+
+Choose one configuration. Without CUDA:
+
+.. code-block:: bat
+
+  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=OFF
+
+Or, for CUDA, install a toolkit compatible with PyTorch and your NVIDIA driver,
+and point ``CUDA_PATH`` to it. For PyTorch 2.10.0 with CUDA 13.0:
+
+.. code-block:: bat
+
+  python -m pip install --force-reinstall --no-deps "torch==2.10.0" --index-url https://download.pytorch.org/whl/cu130
+  cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DCMAKE_CUDA_COMPILER="%CUDA_PATH%\bin\nvcc.exe"
+
+``native`` targets the local GPU; for distribution, specify the intended compute
+capabilities instead (for example, ``120`` for an RTX 5060). Use a fresh CMake
+build directory when changing toolkits.
+
+Build, install and test either configuration with the same commands:
+
+.. code-block:: bat
+
+  cmake --build build --parallel 2
+  python -m pip install --no-build-isolation .
+  python -m pytest tests -v -rs
+
+For the CPU configuration, use CPU-only PyTorch or hide GPUs when running tests
+(``set CUDA_VISIBLE_DEVICES=-1``); the GPU tests require a CUDA-enabled solver.
+For CUDA validation, keep the GPU visible and check that those tests run rather
+than skip.
+
+To run CTest, add the environment's ``Lib\site-packages\torch\lib`` directory
+to PATH, then run ``ctest --test-dir build -C Release --output-on-failure``.
+The wheel bundles the solver DLL; PyTorch supplies its runtime DLLs, so CUDA
+builds require CUDA-enabled PyTorch at runtime too. Windows also needs the
+Microsoft Visual C++ x64 runtime (Visual C++ Redistributable for Visual Studio
+2015-2022).
 
 Verify the installation
 -----------------------

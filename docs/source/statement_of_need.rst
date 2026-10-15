@@ -51,7 +51,7 @@ reimplementing DISORT again, and addresses cdisort's accessibility and
 scalability limitations. Specifically, it:
 
 #. **eliminates build complexity.** Prebuilt binary wheels are published on
-   PyPI for CPython 3.10 through 3.14 on the Linux and macOS targets listed in
+   PyPI for CPython 3.10 through 3.14 on the Linux, macOS and Windows targets listed in
    :doc:`installation`, so
    ``pip install pydisort`` needs no compiler, no Fortran toolchain and no
    local build (see :doc:`installation`);
